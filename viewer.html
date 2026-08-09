@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<!-- Aby i titulkovy pruh okna byl tmavy. Bez tohohle da macOS svetly pruh
+     nad tmavou strankou a cela iluze nativni appky spadne. -->
+<meta name="color-scheme" content="dark">
+<title>iPhone</title>
+<style>
+/* Zamerne systemove pismo. Cilem je splynout s macOS, ne mit vlastni hlas —
+   jakykoli vyrazny display font by rozbil jedinou vec, na ktere tady zalezi. */
+:root {
+  --bg:      oklch(0.16 0.008 265);
+  --bezel:   oklch(0.10 0.006 265);
+  --edge:    oklch(0.30 0.010 265);
+  --text:    oklch(0.88 0.010 265);
+  --muted:   oklch(0.60 0.012 265);
+  --live:    oklch(0.80 0.13 155);
+  --danger:  oklch(0.70 0.15 25);
+
+  --space-xs: 4px;  --space-sm: 8px;  --space-md: 12px;
+  --space-lg: 16px; --space-xl: 24px;
+
+  /* iPhone 14 Pro: 393x852 bodu, radius rohu ~14 % sirky */
+  --dev-w: 393; --dev-h: 852;
+  --radius: 13.5%;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  place-items: center;
+  padding: var(--space-xl);
+}
+
+/* Telefon a lista jsou sourozenci, ne vnorene. Lista nesmi nikdy prekryt
+   obsah obrazovky — zakryvala by prave to, co ma zprostredkovat. */
+.stage {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  justify-items: center;
+  gap: var(--space-md);
+  height: 100%;
+}
+
+/* --- telefon --------------------------------------------------------- */
+
+.phone {
+  position: relative;
+  aspect-ratio: var(--dev-w) / var(--dev-h);
+  height: min(100%, calc(100vw * var(--dev-h) / var(--dev-w)));
+  border-radius: var(--radius);
+  background: var(--bezel);
+  box-shadow:
+    0 0 0 1px oklch(0.35 0.01 265 / 0.6),
+    0 24px 64px -12px oklch(0 0 0 / 0.75),
+    0 2px 8px oklch(0 0 0 / 0.4);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+#screen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+  opacity: 0;
+  transition: opacity 420ms var(--ease);
+}
+.phone[data-state="live"] #screen { opacity: 1; }
+
+/* Zadny kricici focus ring. Ze klavesnice mi do telefonu je videt
+   na tenkem svetlem obrysu, ne na barevnem obdelniku kolem okna. */
+.phone:focus-visible { outline: none; }
+
+/* --- stavove vrstvy --------------------------------------------------- */
+
+.veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-md);
+  padding: var(--space-xl);
+  text-align: center;
+  background: var(--bezel);
+  transition: opacity 300ms var(--ease), visibility 300ms;
+}
+.phone[data-state="live"] .veil { opacity: 0; visibility: hidden; }
+
+.veil h1 {
+  font-size: 15px;
+  font-weight: 590;
+  letter-spacing: -0.01em;
+}
+.veil p {
+  max-width: 34ch;
+  color: var(--muted);
+  font-size: 12px;
+}
+.veil code {
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.pulse {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.phone[data-state="connecting"] .pulse {
+  background: var(--live);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+.phone[data-state="lost"] .pulse { background: var(--danger); }
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.25; transform: scale(0.85); }
+  50%      { opacity: 1;    transform: scale(1); }
+}
+
+/* --- ovladaci lista, jako u Mirroringu se ukaze az na hover ----------- */
+
+/* Lista sedi POD telefonem, ne v nem. Uvnitr by zakryvala dock. */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs);
+  border-radius: 999px;
+  background: oklch(0.22 0.008 265 / 0.72);
+  box-shadow: 0 0 0 1px oklch(0.45 0.01 265 / 0.35);
+  opacity: 0;
+  translate: 0 -6px;
+  transition: opacity 200ms var(--ease), translate 200ms var(--ease);
+  pointer-events: none;
+}
+.stage:hover .bar,
+.stage:focus-within .bar { opacity: 1; translate: 0 0; pointer-events: auto; }
+.stage:has(.phone:not([data-state="live"])) .bar { visibility: hidden; }
+
+.bar button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 140ms var(--ease);
+}
+.bar button:hover  { background: oklch(0.34 0.01 265 / 0.8); }
+.bar button:active { background: oklch(0.28 0.01 265 / 0.9); }
+.bar button:focus-visible { outline: 2px solid var(--live); outline-offset: 1px; }
+
+.bar hr {
+  width: 1px; height: 16px;
+  border: 0; margin: 0 var(--space-xs);
+  background: oklch(0.45 0.01 265 / 0.4);
+}
+
+/* stav psani: tenky prstenec, aby bylo videt, kam jdou klavesy */
+.phone[data-typing="on"] { box-shadow:
+  0 0 0 1px var(--live),
+  0 24px 64px -12px oklch(0 0 0 / 0.75); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="phone" id="phone" data-state="connecting" tabindex="0" aria-label="Obrazovka iPhonu, klikáním se ovládá">
+    <img id="screen" alt="">
+
+    <div class="veil" id="veil" aria-live="polite">
+      <span class="pulse"></span>
+      <h1 id="veilTitle">Připojuji</h1>
+      <p id="veilBody">Hledám WebDriverAgent na <code id="veilHost"></code></p>
+    </div>
+  </div>
+
+  <div class="bar" role="toolbar" aria-label="Ovládání zařízení">
+    <button data-act="home">Plocha</button>
+    <button data-act="appswitch">Přepínač</button>
+    <hr>
+    <button data-act="lock">Zamknout</button>
+    <button data-act="reconnect">Znovu</button>
+  </div>
+</div>
+
+<script>
+const HOST   = location.hash.slice(1) || "127.0.0.1";  // viewer.html#192.168.0.42
+const WDA    = `http://${HOST}:8100`;
+const STREAM = `http://${HOST}:9100`;
+
+const phone  = document.getElementById("phone");
+const screenEl = document.getElementById("screen");
+const veilTitle = document.getElementById("veilTitle");
+const veilBody  = document.getElementById("veilBody");
+document.getElementById("veilHost").textContent = HOST;
+
+let session = null;
+let device  = { w: 393, h: 852 };
+
+const post = (path, body) =>
+  fetch(WDA + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+  });
+
+function setState(state, title, body) {
+  phone.dataset.state = state;
+  if (title) veilTitle.textContent = title;
+  if (body)  veilBody.innerHTML = body;
+}
+
+/* --- pripojeni -------------------------------------------------------- */
+
+async function connect() {
+  setState("connecting", "Připojuji", `Hledám WebDriverAgent na <code>${HOST}</code>`);
+  try {
+    const status = await fetch(WDA + "/status").then(r => r.json());
+    if (!status.value?.ready) throw new Error("WDA hlásí, že není připraven");
+
+    const res = await post("/session", {
+      capabilities: { alwaysMatch: { platformName: "iOS" } },
+    }).then(r => r.json());
+    session = res.value.sessionId;
+
+    const size = await fetch(`${WDA}/session/${session}/window/size`).then(r => r.json());
+    device = { w: size.value.width, h: size.value.height };
+    document.documentElement.style.setProperty("--dev-w", device.w);
+    document.documentElement.style.setProperty("--dev-h", device.h);
+
+    screenEl.src = `${STREAM}/?t=${Date.now()}`;
+  } catch (err) {
+    lost(err.message);
+  }
+}
+
+function lost(why) {
+  session = null;
+  screenEl.removeAttribute("src");
+  setState("lost", "Spojení je pryč",
+    `${why}. Pusť <code>./wda-up.sh</code> a klikni na Znovu.`);
+}
+
+screenEl.addEventListener("load", () => setState("live"));
+screenEl.addEventListener("error", () => {
+  if (phone.dataset.state === "live") lost("Stream se přerušil");
+});
+
+/* --- mapovani souradnic ----------------------------------------------- */
+
+function toDevice(ev) {
+  const r = screenEl.getBoundingClientRect();
+  return {
+    x: Math.round((ev.clientX - r.left) / r.width  * device.w),
+    y: Math.round((ev.clientY - r.top)  / r.height * device.h),
+  };
+}
+
+/* --- vstup: klik = tap, tazeni = swipe -------------------------------- */
+
+const TAP_SLOP = 8;   // px, pod tim je to jeste tap a ne swipe
+let down = null;
+
+screenEl.addEventListener("pointerdown", ev => {
+  if (phone.dataset.state !== "live") return;
+  down = { pt: toDevice(ev), at: performance.now(), cx: ev.clientX, cy: ev.clientY };
+  screenEl.setPointerCapture(ev.pointerId);
+});
+
+screenEl.addEventListener("pointerup", async ev => {
+  if (!down || !session) return;
+  const from = down.pt, to = toDevice(ev);
+  const moved = Math.hypot(ev.clientX - down.cx, ev.clientY - down.cy);
+  const held  = (performance.now() - down.at) / 1000;
+  down = null;
+
+  try {
+    if (moved > TAP_SLOP) {
+      await post(`/session/${session}/wda/dragfromtoforduration`, {
+        fromX: from.x, fromY: from.y, toX: to.x, toY: to.y,
+        duration: Math.min(Math.max(held, 0.1), 1),
+      });
+    } else {
+      await post(`/session/${session}/actions`, {
+        actions: [{
+          type: "pointer", id: "f1", parameters: { pointerType: "touch" },
+          actions: [
+            { type: "pointerMove", duration: 0, x: from.x, y: from.y },
+            { type: "pointerDown", button: 0 },
+            { type: "pause", duration: held > 0.5 ? 700 : 60 },
+            { type: "pointerUp", button: 0 },
+          ],
+        }],
+      });
+    }
+  } catch { lost("Zařízení neodpovědělo na dotyk"); }
+});
+
+screenEl.addEventListener("contextmenu", ev => ev.preventDefault());
+
+/* --- trackpad: dva prsty scrolluji telefonem ---------------------------
+   Wheel eventy chodi v davce po desitkach. Posilat swipe na kazdy z nich
+   by WDA zahltilo a stejne by se to na telefonu slilo do jednoho pohybu,
+   tak se delta scita a odesle se az kdyz prsty zastavi. */
+// Smer scrollu zavisi na tvem nastaveni "prirozene scrollovani" v macOS
+// a hlavne na tom, jak ti to sedi pod prstem. Prehodit na false, kdyby to
+// jelo obracene.
+const SCROLL_NATURAL = true;
+
+let wheelSum = 0, wheelTimer = null, wheelAt = null;
+
+screenEl.addEventListener("wheel", ev => {
+  if (phone.dataset.state !== "live" || !session) return;
+  ev.preventDefault();
+  if (wheelSum === 0) wheelAt = toDevice(ev);
+  wheelSum += ev.deltaY;
+
+  clearTimeout(wheelTimer);
+  wheelTimer = setTimeout(flushWheel, 90);
+}, { passive: false });
+
+async function flushWheel() {
+  const dy = Math.max(-560, Math.min(560, wheelSum * 2.2));
+  const at = wheelAt;
+  wheelSum = 0;
+  if (Math.abs(dy) < 24 || !at) return;
+
+  const d = SCROLL_NATURAL ? -dy : dy;
+  const fromY = Math.min(Math.max(at.y + d / 2, 60), device.h - 60);
+  const toY   = Math.min(Math.max(fromY - d,    60), device.h - 60);
+
+  try {
+    await post(`/session/${session}/actions`, {
+      actions: [{
+        type: "pointer", id: "f1", parameters: { pointerType: "touch" },
+        actions: [
+          { type: "pointerMove", duration: 0, x: at.x, y: Math.round(fromY) },
+          { type: "pointerDown", button: 0 },
+          { type: "pointerMove", duration: 220, x: at.x, y: Math.round(toY) },
+          { type: "pointerUp", button: 0 },
+        ],
+      }],
+    });
+  } catch { lost("Scroll neprošel"); }
+}
+
+/* --- klavesnice -------------------------------------------------------- */
+
+phone.addEventListener("focus", () => phone.dataset.typing = "on");
+phone.addEventListener("blur",  () => phone.dataset.typing = "off");
+
+phone.addEventListener("keydown", async ev => {
+  if (!session || ev.metaKey || ev.ctrlKey) return;
+
+  if (ev.key === "Escape")    { ev.preventDefault(); return act("home"); }
+  if (ev.key === "Backspace") { ev.preventDefault(); return keys("\b"); }
+  if (ev.key === "Enter")     { ev.preventDefault(); return keys("\n"); }
+  if (ev.key.length === 1)    { ev.preventDefault(); return keys(ev.key); }
+});
+
+const keys = async v => {
+  try { await post(`/session/${session}/wda/keys`, { value: [v] }); }
+  catch { lost("Znak se nepodařilo odeslat"); }
+};
+
+/* --- lista ------------------------------------------------------------- */
+
+async function act(what) {
+  try {
+    if (what === "home")       return void await post("/wda/homescreen");
+    if (what === "reconnect")  return void connect();
+    if (!session) return;
+    if (what === "lock")       return void await post(`/session/${session}/wda/lock`);
+    if (what === "appswitch")  return void await post(`/session/${session}/wda/pressButton`, { name: "home" })
+      .then(() => post(`/session/${session}/wda/pressButton`, { name: "home" }));
+  } catch { lost("Příkaz neprošel"); }
+}
+
+document.querySelectorAll(".bar button").forEach(b =>
+  b.addEventListener("click", ev => { ev.stopPropagation(); act(b.dataset.act); phone.focus(); }));
+
+connect();
+</script>
+</body>
+</html>
