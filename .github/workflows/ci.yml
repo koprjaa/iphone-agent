@@ -8,7 +8,8 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    # The project drives an iPhone from a Mac, so it lints where it runs.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -19,5 +20,5 @@ jobs:
       - name: Lint (ruff)
         run: uvx ruff check phone.py
 
-      - name: Lint shell scripts (shellcheck)
-        run: shellcheck wda-up.sh viewer.sh
+      - name: Check zsh syntax
+        run: zsh -n wda-up.sh && zsh -n viewer.sh
