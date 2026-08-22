@@ -15,8 +15,9 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
+      # harness/ is a vendored fork of ShawnPana/phone-harness and keeps upstream style.
       - name: Lint (ruff)
-        run: uvx ruff check phone.py harness/src
+        run: uvx ruff check phone.py
 
       - name: Lint shell scripts (shellcheck)
         run: shellcheck wda-up.sh viewer.sh

@@ -1,12 +1,14 @@
-"""Ovládání iPhonu přes WebDriverAgent po Wi-Fi.
+"""Controls an iPhone over WebDriverAgent on Wi-Fi.
 
-Náhrada phone-harness pro EU, kde iPhone Mirroring není.
-Rozdíl proti phone-harness: WDA vrací accessibility tree, takže se
-neklikají nahádané pixely z OCR, ale konkrétní prvky podle labelu.
+A replacement for phone-harness in the EU, where iPhone Mirroring does not run.
+The difference from phone-harness: WebDriverAgent returns an accessibility tree,
+so the code taps a named element instead of a pixel guessed from OCR.
 
-Setup: WDA běží na telefonu, adresa v env WDA_URL (http://<ip>:8100).
+Setup: WebDriverAgent runs on the phone. Put its address in WDA_URL
+(http://<ip>:8100).
 """
 import os
+
 import wda
 
 URL = os.environ.get("WDA_URL") or "http://" + os.environ.get("PHONE_HOST", "127.0.0.1") + ":8100"
@@ -15,18 +17,18 @@ s = c.session()
 
 
 def see(path="screen.png"):
-    """Screenshot do souboru. Pro vision model, když label nestačí."""
+    """Writes a screenshot to a file, for a vision model when a label is not enough."""
     c.screenshot(path)
     return path
 
 
 def tree():
-    """Accessibility tree jako JSON. Tohle nahrazuje OCR z phone-harness."""
+    """Returns the accessibility tree as JSON. This replaces the OCR in phone-harness."""
     return c.source(accessible=True)
 
 
 def tap(label, timeout=5.0):
-    """Klik na prvek podle labelu. Čeká, až se objeví."""
+    """Taps an element by its label. Waits until the element appears."""
     s(label=label).get(timeout=timeout).tap()
 
 
@@ -43,17 +45,17 @@ def scroll(direction="up"):
 
 
 def app(bundle_id):
-    """Přepne na appku, např. 'com.apple.Preferences'."""
+    """Moves to an application, for example 'com.apple.Preferences'."""
     s.app_activate(bundle_id)
 
 
 def here():
-    """Co je teď v popředí. Verifikace po akci."""
+    """Returns what is in the foreground. Use it to verify an action."""
     return c.app_current()
 
 
 def doctor():
-    """Ověří, že WDA odpovídá a session drží. Spusť po instalaci WDA."""
+    """Checks that WebDriverAgent answers and the session holds. Run it after install."""
     st = c.status()
     assert st.get("sessionId") or st.get("state"), f"WDA neodpovida: {st}"
     cur = here()
