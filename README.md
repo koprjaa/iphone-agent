@@ -1,127 +1,149 @@
 # iphone-agent
 
-Ovládání skutečného iPhonu z Macu, pro člověka i pro LLM agenta. Postavené na
-WebDriverAgent, protože **iPhone Mirroring v EU nefunguje a nepůjde obejít**.
+Controls a real iPhone from a Mac over WebDriverAgent, for a person and for an LLM agent. It shows the live screen in its own window, turns clicks into taps and drags into swipes, and exposes the same primitives to Python. It exists because iPhone Mirroring is region-locked in the EU and the lock cannot be lifted from the Mac side.
 
-Živý obraz telefonu ve vlastním okně, klik ťuká, tažení swipuje, dva prsty
-scrollují, klávesnice píše. Plus Python klient, přes který to řídí agent.
+![python](https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![platform](https://img.shields.io/badge/platform-macOS-000?style=flat-square&logo=apple&logoColor=white)
+![license](https://img.shields.io/badge/license-MIT-A31F34?style=flat-square)
+![status](https://img.shields.io/badge/status-prototype-lightgrey?style=flat-square)
+[![ci](https://github.com/koprjaa/iphone-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/koprjaa/iphone-agent/actions/workflows/ci.yml)
 
-## Proč ne iPhone Mirroring
+## What it does
 
-Od iOS 26 se region check vyhodnocuje **na telefonu** a je podepsaný v auth
-odpovědi, takže se z Macu spoofnout nedá. Chyba, kterou uvidíš v logu:
+`viewer.html` draws the phone screen and sends input back. It is one file with no
+dependencies and no backend, because WebDriverAgent sends
+`Access-Control-Allow-Origin: *`. A click taps, a drag swipes, two fingers scroll, and
+the keyboard types.
+
+`phone.py` wraps `facebook-wda` and gives an agent the same primitives from Python.
+
+## Why not iPhone Mirroring
+
+Since iOS 26 the region check runs on the phone and is signed in the authentication
+response, so it cannot be spoofed from the Mac. The log shows:
 
 ```
 Error Domain=com.apple.sharing.authentication Code=35
 "Remote device threw an error: SFAuthenticationErrorCodeRegionLocked"
 ```
 
-`Remote device` je telefon, ne Mac. Starší Mac-side patche (`mirroreu`,
-`Pauli1Go/iphone-mirroring-eu-enabler`, `timi2506/iphone-mirroring-eu-activate`)
-fungovaly, dokud Apple hlídal jen Mac. Dnes ti nastaví
-`OS_ELIGIBILITY_DOMAIN_IRON` na eligible, Mac projde všemi kontrolami a telefon
-tě stejně odmítne. Detailní rozbor: [`nxm/iphone-mirroring-bypass`](https://github.com/nxm/iphone-mirroring-bypass).
+`Remote device` is the phone, not the Mac. The older Mac-side patches (`mirroreu`,
+`Pauli1Go/iphone-mirroring-eu-enabler`, `timi2506/iphone-mirroring-eu-activate`) worked
+while Apple checked only the Mac. Today they set `OS_ELIGIBILITY_DOMAIN_IRON` to
+eligible, the Mac passes every check, and the phone still refuses. A detailed analysis
+is in [`nxm/iphone-mirroring-bypass`](https://github.com/nxm/iphone-mirroring-bypass).
 
-Není to o SIP. `/private/var/db/os_eligibility/eligibility.plist` je TCC-chráněný,
-ne SIP-restricted.
+This is not about SIP. `/private/var/db/os_eligibility/eligibility.plist` is
+TCC-protected, not SIP-restricted.
 
-## Bezpečnost, čti to
+## Security
 
-**WDA nemá žádnou autentizaci.** Kdo dosáhne na port 8100, ovládá telefon:
-čte obrazovku, ťuká, píše, otevírá appky. Na tailnetu to znamená každé tvoje
-zařízení plus cokoli sdíleného.
+**WebDriverAgent has no authentication.** Anyone who reaches port 8100 controls the
+phone: they read the screen, tap, type, and open applications. On a tailnet that means
+every one of your devices, plus anything you share.
 
-Nepouštěj to na telefon, který ti něco znamená. Testovací kus, vlastní Apple ID,
-ideálně vlastní VLAN. Když skončíš, smaž runner z telefonu a vypni Developer
-Mode; bez něj WDA nejde spustit.
+Do not run this on a phone that matters to you. Use a spare device, a separate Apple ID,
+and ideally a separate VLAN. When you finish, remove the runner from the phone and turn
+off Developer Mode; WebDriverAgent cannot start without it.
 
-## Setup
+## Install
 
-Kabel je potřeba jen tehdy, když Mac s telefonem ještě nikdy nebyl spárovaný.
-Jinak jede všechno po Wi-Fi včetně buildu.
+A cable is necessary only if the Mac and the phone have never been paired. Everything
+else runs over Wi-Fi, including the build.
 
-1. Xcode. Z App Store přijde bez iOS platformy, dotáhni ji:
+1. Install Xcode. The App Store version comes without the iOS platform, so add it:
    `xcodebuild -downloadPlatform iOS`
-2. Na telefonu **Nastavení → Soukromí a zabezpečení → Režim pro vývojáře** → zapnout → restart
-3. Na telefonu **Nastavení → Vývoj → Zapnout automatizaci rozhraní**.
-   Bez toho XCUITest spadne na `Timed out while enabling automation mode`.
-4. Naklonuj a postav WebDriverAgent:
+2. On the phone open **Settings > Privacy & Security > Developer Mode**, turn it on, and
+   restart.
+3. On the phone open **Settings > Developer** and turn on **Enable UI Automation**.
+   Without it XCUITest fails with `Timed out while enabling automation mode`.
+4. Clone and build WebDriverAgent:
+
    ```bash
    git clone https://github.com/appium/WebDriverAgent
    cd WebDriverAgent
    ```
-   V Xcode otevři `WebDriverAgent.xcodeproj`, u targetů `WebDriverAgentRunner`
-   a `WebDriverAgentLib` zapni automatické podepisování a vyber svůj tým.
-   Bundle ID `com.facebook.WebDriverAgentRunner` je zabrané, přepiš ho na svoje.
+
+   Open `WebDriverAgent.xcodeproj` in Xcode. For the `WebDriverAgentRunner` and
+   `WebDriverAgentLib` targets turn on automatic signing and select your team. The bundle
+   identifier `com.facebook.WebDriverAgentRunner` is taken, so replace it with your own.
+
    ```bash
    xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner \
      -destination "id=$UDID" -allowProvisioningUpdates build-for-testing
    ```
-5. Napoprvé iOS odmítne appku spustit. Na telefonu
-   **Nastavení → Obecné → VPN a správa zařízení** → tvůj účet → Důvěřovat.
-6. `cp .env.example .env` a vyplň
-7. `./wda-up.sh` a v druhém okně `./viewer.sh`
 
-## Dvě omezení, se kterými musíš počítat
+5. The first launch is refused by iOS. On the phone open
+   **Settings > General > VPN & Device Management**, select your account, and trust it.
+6. Copy the configuration: `cp .env.example .env` and fill it in.
 
-**Session tiše ztrácí dotyky.** Po nějaké době přestanou tapy a swipy fungovat.
-Strom, snímky i `/status` jedou dál a nic nehlásí chybu, v logu XCUITest pořád
-píše `Synthesize event` se správnými souřadnicemi. Jediná náprava je restart,
-tedy `./wda-up.sh` znovu. Hned po restartu dotyky prokazatelně fungují.
+## Use
 
-**Obraz je stropovaný kolem 10 fps.** Naměřeno ve čtyřech konfiguracích:
+```bash
+./wda-up.sh      # starts and holds the WebDriverAgent session
+./viewer.sh      # opens the viewer in its own window
+```
 
-| framerate | kvalita | zmenšení | naměřeno |
+## Two limits to expect
+
+**The session loses touches silently.** After some time taps and swipes stop working. The
+element tree, the screenshots, and `/status` continue to answer and nothing reports an
+error. The XCUITest log still prints `Synthesize event` with the correct coordinates. The
+only repair is a restart, so run `./wda-up.sh` again. Touches work again immediately
+after the restart.
+
+**The image is capped near 10 fps.** Measured in four configurations:
+
+| framerate | quality | scale | measured |
 |---|---|---|---|
-| 10 (default) | 25 | 100 % | 9,5 fps |
-| 30 | 45 | 80 % | 8,0 fps |
-| 60 | 20 | 50 % | 7,0 fps |
-| 60 | 10 | 40 % | 9,8 fps |
+| 10 (default) | 25 | 100 % | 9.5 fps |
+| 30 | 45 | 80 % | 8.0 fps |
+| 60 | 20 | 50 % | 7.0 fps |
+| 60 | 10 | 40 % | 9.8 fps |
 
-Úzké hrdlo je pořizování snímků v XCUITestu, ne síť ani nastavení. Vyšší
-framerate dokonce ubližuje, protože těžší snímky zpomalí přenos. Pro plynulý
-obraz musí jinam zdroj videa: H264 z [`devicekit-ios`](https://github.com/mobile-next/devicekit-ios),
-nebo AirPlay na Mac (v EU funguje) a WDA nechat jen na ovládání.
+The bottleneck is screenshot capture in XCUITest, not the network and not the settings. A
+higher framerate makes it worse, because heavier frames slow the transfer down. A smooth
+image needs a different video source: H264 from
+[`devicekit-ios`](https://github.com/mobile-next/devicekit-ios), or AirPlay to the Mac
+(which works in the EU) with WebDriverAgent left to do the control only.
 
-## Endpointy WDA, ověřené proti zařízení
+## WebDriverAgent endpoints, verified against a device
 
-Verze WDA se liší, tyhle platí pro srpen 2026 na iOS 26.5:
+WebDriverAgent versions differ. These hold for August 2026 on iOS 26.5:
 
-| co | jak |
+| operation | request |
 |---|---|
-| tap | `POST /session/{sid}/actions`, W3C pointer sekvence |
+| tap | `POST /session/{sid}/actions`, W3C pointer sequence |
 | swipe | `POST /session/{sid}/wda/dragfromtoforduration` |
-| text | `POST /session/{sid}/wda/keys` `{"value":["ahoj"]}` |
-| plocha | `POST /wda/homescreen`, bez session |
+| text | `POST /session/{sid}/wda/keys` `{"value":["hello"]}` |
+| home screen | `POST /wda/homescreen`, no session |
 | stream | `GET :9100`, `multipart/x-mixed-replace` |
 
-Staré `/session/{sid}/wda/tap/0` vrací **404 unknown command**. Hodně návodů
-na internetu ho pořád uvádí.
+The old `/session/{sid}/wda/tap/0` returns **404 unknown command**. Many guides on the
+internet still list it.
 
-WDA posílá `Access-Control-Allow-Origin: *`, takže viewer nepotřebuje backend.
-Je to jeden HTML soubor.
-
-## Obsah
+## Contents
 
 | | |
 |---|---|
-| `phone.py` | Python klient nad `facebook-wda`, primitiva pro agenta |
-| `viewer.html` | živý obraz + ovládání, jeden soubor, bez závislostí |
-| `viewer.sh` | otevře viewer ve vlastním okně bez prohlížečového chromu |
-| `wda-up.sh` | nahodí a drží WDA session |
-| `harness/` | fork [ShawnPana/phone-harness](https://github.com/ShawnPana/phone-harness) (MIT) s cílovým oknem jako proměnná, funguje nad libovolným oknem na Macu |
+| `phone.py` | Python client over `facebook-wda`, primitives for an agent |
+| `viewer.html` | live screen and control, one file, no dependencies |
+| `viewer.sh` | opens the viewer in its own window without browser chrome |
+| `wda-up.sh` | starts and holds the WebDriverAgent session |
+| `harness/` | fork of [ShawnPana/phone-harness](https://github.com/ShawnPana/phone-harness) (MIT) with the target window as a variable, so it works over any window on the Mac |
 
-Ve forku je opravený i upstream bug: `pyproject.toml` požadoval
-`pyobjc-framework-AppKit`, který na PyPI neexistuje. Správně je
+The fork also repairs an upstream defect: `pyproject.toml` required
+`pyobjc-framework-AppKit`, which does not exist on PyPI. The correct name is
 `pyobjc-framework-Cocoa`.
 
-## Známé vady
+## Known defects
 
-- Viewer má **moc zaoblené rohy**, `--radius: 13.5%` neodpovídá skutečnému iPhonu
-- Titulkový pruh okna zůstává světlý. Chromium na macOS okno bez titulku neumí
-  a `<meta name="color-scheme">` na rám nedosáhne.
-- Směr scrollu je konstanta `SCROLL_NATURAL` ve `viewer.html`, ne autodetekce
+- The viewer corners are too round. `--radius: 13.5%` does not match a real iPhone.
+- The window title bar stays light. Chromium on macOS cannot open a window without a
+  title bar, and `<meta name="color-scheme">` does not reach the frame.
+- The scroll direction is the constant `SCROLL_NATURAL` in `viewer.html`, not a
+  detection.
 
-## Licence
+## License
 
-MIT. `harness/` přebírá licenci původního projektu.
+MIT. `harness/` keeps the license of the original project. See `NOTICE`.
