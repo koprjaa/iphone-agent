@@ -22,3 +22,6 @@ jobs:
 
       - name: Check zsh syntax
         run: zsh -n wda-up.sh && zsh -n viewer.sh
+
+      - name: Test (pytest)
+        run: uv run --python 3.12 --with pytest pytest -q
