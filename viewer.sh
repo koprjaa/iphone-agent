@@ -15,7 +15,8 @@ BRAVE="/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
 
 # server nastartuj jen kdyz uz nebezi
 if ! curl -sf -o /dev/null -m 2 "$URL"; then
-  (cd "$DIR" && python3 -m http.server $PORT >/dev/null 2>&1 &)
+  # jen loopback: server vydava cely adresar repa a nema prihlaseni
+  (cd "$DIR" && python3 -m http.server --bind 127.0.0.1 $PORT >/dev/null 2>&1 &)
   for i in {1..15}; do curl -sf -o /dev/null -m 1 "$URL" && break; sleep 0.4; done
 fi
 
