@@ -1,3 +1,17 @@
+#
+# Project: iphone-agent
+# File:    test_phone.py
+#
+# Description:
+# Tests for the phone module's interaction and URL configuration logic.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import importlib
 
 import pytest

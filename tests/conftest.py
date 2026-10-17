@@ -1,3 +1,17 @@
+#
+# Project: iphone-agent
+# File:    conftest.py
+#
+# Description:
+# Provides fixtures to mock the WebDriverAgent client and prevent network connections.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 """Shared test setup.
 
 phone.py creates a WebDriverAgent client and session at import time
@@ -5,6 +19,7 @@ phone.py creates a WebDriverAgent client and session at import time
 with a MagicMock-based fake *before* phone.py is ever imported. No test here
 talks to a real phone, a real WebDriverAgent server, or the network.
 """
+
 import socket
 import sys
 import types

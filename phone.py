@@ -1,3 +1,17 @@
+#
+# Project: iphone-agent
+# File:    phone.py
+#
+# Description:
+# Controls an iPhone via WebDriverAgent using accessibility tree interactions.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 """Controls an iPhone over WebDriverAgent on Wi-Fi.
 
 A replacement for phone-harness in the EU, where iPhone Mirroring does not run.
@@ -7,6 +21,7 @@ so the code taps a named element instead of a pixel guessed from OCR.
 Setup: WebDriverAgent runs on the phone. Put its address in WDA_URL
 (http://<ip>:8100).
 """
+
 import os
 
 import wda

@@ -1,4 +1,19 @@
+#
+# Project: iphone-agent
+# File:    run.py
+#
+# Description:
+# Executes Python code from stdin with pre-imported helpers via the phone-harness CLI.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 """The phone-harness CLI: exec Python from stdin with helpers pre-imported."""
+
 import sys
 from pathlib import Path
 
@@ -20,6 +35,7 @@ def main():
         return
     if args and args[0] in {"--doctor", "doctor"}:
         from .admin import run_doctor
+
         sys.exit(run_doctor())
     if args and args[0] == "skill":
         repo_root = Path(__file__).resolve().parent.parent.parent
@@ -31,6 +47,7 @@ def main():
     if not code.strip():
         sys.exit(USAGE)
     from . import helpers
+
     g = {k: v for k, v in vars(helpers).items() if not k.startswith("_")}
     g["__name__"] = "__main__"
     exec(code, g)

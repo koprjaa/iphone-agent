@@ -1,3 +1,17 @@
+#
+# Project: iphone-agent
+# File:    helpers.py
+#
+# Description:
+# Provides utility functions for managing iPhone Mirroring connection states.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 """Phone control via iPhone Mirroring.
 
 Core helpers live here. Agent-editable helpers live in
@@ -5,18 +19,28 @@ PH_AGENT_WORKSPACE/agent_helpers.py (defaults to <repo>/agent-workspace).
 Raw Quartz is always available: `import Quartz` in your script for anything
 these helpers don't cover.
 """
-import hashlib, importlib.util, os, time
+
+import hashlib
+import importlib.util
+import os
+import time
 from pathlib import Path
 
-from . import mirror, ocr as _ocr
+from . import mirror
+from . import ocr as _ocr
 from .mirror import (  # re-exported input primitives
-    tap, long_press, drag, press, type_text, activate, find_window,
+    activate,
+    drag,
+    find_window,
+    long_press,
+    press,
+    tap,
+    type_text,
 )
 
 CORE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = CORE_DIR.parent.parent
-AGENT_WORKSPACE = Path(
-    os.environ.get("PH_AGENT_WORKSPACE", REPO_ROOT / "agent-workspace"))
+AGENT_WORKSPACE = Path(os.environ.get("PH_AGENT_WORKSPACE", REPO_ROOT / "agent-workspace"))
 
 
 # --- session / state ---
@@ -24,8 +48,7 @@ AGENT_WORKSPACE = Path(
 # Distinctive text on the not-connected interstitials. Reconnecting past any of
 # these is a PHYSICAL action only the user can do (open the app, and if it says
 # "iPhone in Use", LOCK the phone). The agent must never tap through them.
-_BLOCKED_MARKERS = ("iphone in use", "lock your iphone", "mirroring ended",
-                    "to connect")
+_BLOCKED_MARKERS = ("iphone in use", "lock your iphone", "mirroring ended", "to connect")
 
 
 def connection_state():
@@ -58,16 +81,19 @@ def ensure_mirroring():
         raise RuntimeError(
             "iPhone Mirroring isn't running. Please open the iPhone Mirroring "
             "app and connect your phone, then retry — reconnecting is physical, "
-            "so I can't do it for you.")
+            "so I can't do it for you."
+        )
     if state == "no-window":
         raise RuntimeError(
             "iPhone Mirroring is open but no phone is connected. Please connect "
-            "your phone in the app, then retry.")
+            "your phone in the app, then retry."
+        )
     raise RuntimeError(
         "iPhone Mirroring is not connected — it's showing a connect / 'iPhone "
         "in Use' screen. This needs you: open iPhone Mirroring and connect the "
         "phone, and if it says 'iPhone in Use', LOCK your iPhone so mirroring "
-        "can resume. Then retry. I will not tap Connect for you.")
+        "can resume. Then retry. I will not tap Connect for you."
+    )
 
 
 def screen_info():
@@ -86,20 +112,19 @@ def screenshot(path=None):
 
 # --- reading the screen ---
 
+
 def ocr(min_confidence=0.3):
     """All visible text with tap-ready screen-point centers:
     [{text, confidence, x, y, w, h}]. This is the element tree — prefer it
     over eyeballing screenshots for anything with a text label."""
     path, win = mirror.capture()
-    return [o for o in _ocr.recognize(path, win)
-            if o["confidence"] >= min_confidence]
+    return [o for o in _ocr.recognize(path, win) if o["confidence"] >= min_confidence]
 
 
 def find_text(query, exact=False):
     """OCR results matching query (case-insensitive substring by default)."""
     q = query.lower()
-    return [o for o in ocr()
-            if (o["text"].lower() == q if exact else q in o["text"].lower())]
+    return [o for o in ocr() if (o["text"].lower() == q if exact else q in o["text"].lower())]
 
 
 def tap_text(query, index=0, exact=False):
@@ -115,6 +140,7 @@ def tap_text(query, index=0, exact=False):
 
 
 # --- gestures relative to the phone window ---
+
 
 def _win():
     return mirror.ensure_window()
@@ -132,8 +158,7 @@ def swipe(direction, distance=0.4):
     # Fast, short drag = a momentum flick. A slow drag barely registers on iOS
     # (it won't even flip a Home-Screen page); the flick is what snaps pages
     # and carousels. For scrolling lists use scroll()/scroll_collect() instead.
-    mirror.drag(cx - dx / 2, cy - dy / 2, cx + dx / 2, cy + dy / 2,
-                duration=0.12, steps=6)
+    mirror.drag(cx - dx / 2, cy - dy / 2, cx + dx / 2, cy + dy / 2, duration=0.12, steps=6)
 
 
 def scroll(amount=300):
@@ -150,14 +175,14 @@ def scroll(amount=300):
 # read as "done" — only the pixels going still (after a settle window that lets
 # lazy-loaded content arrive) means the end.
 
+
 def _content_texts(min_conf=0.4, top_frac=0.06, bottom_frac=0.92):
     """OCR of the scrollable content area, excluding the volatile status bar
     (clock/battery) at top and the nav/home strip at bottom."""
     path, win = mirror.capture()
     top = win["y"] + win["h"] * top_frac
     bot = win["y"] + win["h"] * bottom_frac
-    return [o for o in _ocr.recognize(path, win)
-            if top < o["y"] < bot and o["confidence"] >= min_conf]
+    return [o for o in _ocr.recognize(path, win) if top < o["y"] < bot and o["confidence"] >= min_conf]
 
 
 def _text_set(boxes):
@@ -190,22 +215,25 @@ def scroll_screen(direction="up", amount=0.6, settle=2.5, moved_thresh=0.6):
     # Wheel scroll, not drag: a slow touch-drag barely moves an iOS list and
     # bounces back, while wheel events advance it deterministically (proven on
     # long lists). amount is a fraction of window height.
-    mirror.scroll_wheel(sign * int(w["h"] * amount),
-                        w["x"] + w["w"] / 2, w["y"] + w["h"] / 2, steps=10)
+    mirror.scroll_wheel(sign * int(w["h"] * amount), w["x"] + w["w"] / 2, w["y"] + w["h"] / 2, steps=10)
     time.sleep(0.4)
     prev_boxes, prev = None, None
     deadline = time.time() + settle
     while time.time() < deadline:
         boxes = _content_texts()
         cur = _text_set(boxes)
-        if cur == prev:                 # two identical captures = settled
+        if cur == prev:  # two identical captures = settled
             break
         prev, prev_boxes = cur, boxes
         time.sleep(0.35)
     after = prev or frozenset()
-    return {"moved": _overlap(before, after) < moved_thresh,
-            "overlap": round(_overlap(before, after), 3),
-            "before": before, "after": after, "boxes": prev_boxes or []}
+    return {
+        "moved": _overlap(before, after) < moved_thresh,
+        "overlap": round(_overlap(before, after), 3),
+        "before": before,
+        "after": after,
+        "boxes": prev_boxes or [],
+    }
 
 
 def scroll_until(done, direction="up", amount=0.6, max_scrolls=60, settle=2.5):
@@ -229,15 +257,23 @@ def scroll_until(done, direction="up", amount=0.6, max_scrolls=60, settle=2.5):
             stale = 0
         else:
             stale += 1
-            if stale >= 2:              # confirmed still after a retry
+            if stale >= 2:  # confirmed still after a retry
                 return None
             time.sleep(0.8)
             mirror.activate()
     return None
 
 
-def scroll_collect(extract=None, key=None, direction="up", amount=0.6,
-                   max_scrolls=400, end_after=3, settle=2.5, on_progress=None):
+def scroll_collect(
+    extract=None,
+    key=None,
+    direction="up",
+    amount=0.6,
+    max_scrolls=400,
+    end_after=3,
+    settle=2.5,
+    on_progress=None,
+):
     """Scroll a list top-to-bottom, extracting and de-duping items each screen,
     until the list reaches its true end.
 
@@ -250,8 +286,7 @@ def scroll_collect(extract=None, key=None, direction="up", amount=0.6,
     Returns {items, stop, scrolls}. `stop` is 'reached-end' or 'max-scrolls'.
     Use amount < 1.0 so screens overlap and no row falls between captures.
     """
-    extract = extract or (lambda boxes: [o["text"].strip() for o in boxes
-                                         if o["text"].strip()])
+    extract = extract or (lambda boxes: [o["text"].strip() for o in boxes if o["text"].strip()])
     key = key or (lambda x: x)
     seen, order = set(), []
 
@@ -279,12 +314,13 @@ def scroll_collect(extract=None, key=None, direction="up", amount=0.6,
             stale += 1
             if stale >= end_after:
                 return {"items": order, "stop": "reached-end", "scrolls": i}
-            time.sleep(0.8)            # extra grace for a slow lazy-load
+            time.sleep(0.8)  # extra grace for a slow lazy-load
             mirror.activate()
     return {"items": order, "stop": "max-scrolls", "scrolls": max_scrolls}
 
 
 # --- navigation ---
+
 
 def home():
     """Go to the iPhone Home Screen (Cmd+1)."""
@@ -308,6 +344,7 @@ def open_app(name):
 
 
 # --- timing ---
+
 
 def wait(seconds=1.0):
     time.sleep(seconds)

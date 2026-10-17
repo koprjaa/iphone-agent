@@ -1,8 +1,23 @@
+#
+# Project: iphone-agent
+# File:    ocr.py
+#
+# Description:
+# Performs text recognition on window captures using Apple's Vision framework.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 """Text recognition over window captures via Apple's Vision framework.
 
 This is the mirror backend's element tree: OCR gives every visible string a
 bounding box, converted here into global screen points ready for tap().
 """
+
 import Quartz
 import Vision
 from Foundation import NSURL
@@ -23,8 +38,7 @@ def recognize(path, window):
     screen points — pass straight to tap(). Vision's normalized boxes have a
     bottom-left origin; screen points have a top-left origin, hence the flip.
     """
-    handler = Vision.VNImageRequestHandler.alloc().initWithURL_options_(
-        NSURL.fileURLWithPath_(path), {})
+    handler = Vision.VNImageRequestHandler.alloc().initWithURL_options_(NSURL.fileURLWithPath_(path), {})
     request = Vision.VNRecognizeTextRequest.alloc().init()
     request.setRecognitionLevel_(Vision.VNRequestTextRecognitionLevelAccurate)
     ok, err = handler.performRequests_error_([request], None)
@@ -45,12 +59,14 @@ def recognize(path, window):
         py_top = (1.0 - bb.origin.y - bb.size.height) * img_h
         pw = bb.size.width * img_w
         ph = bb.size.height * img_h
-        out.append({
-            "text": str(cand[0].string()),
-            "confidence": round(float(cand[0].confidence()), 3),
-            "x": round(window["x"] + (px + pw / 2) * sx, 1),
-            "y": round(window["y"] + (py_top + ph / 2) * sy, 1),
-            "w": round(pw * sx, 1),
-            "h": round(ph * sy, 1),
-        })
+        out.append(
+            {
+                "text": str(cand[0].string()),
+                "confidence": round(float(cand[0].confidence()), 3),
+                "x": round(window["x"] + (px + pw / 2) * sx, 1),
+                "y": round(window["y"] + (py_top + ph / 2) * sy, 1),
+                "w": round(pw * sx, 1),
+                "h": round(ph * sy, 1),
+            }
+        )
     return out
