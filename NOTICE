@@ -3,4 +3,4 @@
 `harness/` is derived from [ShawnPana/phone-harness](https://github.com/ShawnPana/phone-harness)
 and stays under its own MIT license; see `harness/LICENSE`.
 
-Everything else is (c) 2026 Jan Alexandr Kopriva, MIT — see `LICENSE`.
+Everything else is (c) 2026 Jan Alexandr Kopriva, AGPL-3.0-or-later — see `LICENSE`.

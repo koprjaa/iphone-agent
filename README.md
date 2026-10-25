@@ -3,7 +3,7 @@
 Control an iPhone from a Mac, by hand or by LLM agent.
 
 [![ci](https://github.com/koprjaa/iphone-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/koprjaa/iphone-agent/actions/workflows/ci.yml)
-[![license](https://img.shields.io/badge/license-MIT-A31F34?style=flat-square)](LICENSE)
+[![license](https://img.shields.io/badge/license-AGPL--3.0-A31F34?style=flat-square)](LICENSE)
 
 `harness/` is a fork of [ShawnPana/phone-harness](https://github.com/ShawnPana/phone-harness) (MIT, see `NOTICE`).
 
@@ -47,4 +47,4 @@ print(phone.tree())
 
 ## License
 
-[MIT](LICENSE). `harness/` keeps the license of the original project.
+[AGPL-3.0-or-later](LICENSE). `harness/` keeps the license of the original project.
